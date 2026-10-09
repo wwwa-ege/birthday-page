@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a0b2e">
+<title>生日祝福制作器</title>
+<style>
+  :root{
+    --bg1:#14092a;
+    --accent:#ff9ecd;
+    --gold:#ffd76a;
+    --text:#f7ecff;
+    --text-dim:#cbb9d6;
+    --card:rgba(255,255,255,.05);
+    --border:rgba(255,158,205,.28);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    color:var(--text);
+  }
+  .hidden{ display:none !important; }
+
+  /* ============ 编辑模式 ============ */
+  #editMode{
+    min-height:100vh;
+    background:
+      radial-gradient(1100px 560px at 50% -10%, rgba(255,158,205,.24), transparent 60%),
+      radial-gradient(900px 500px at 88% 108%, rgba(255,183,94,.14), transparent 62%),
+      linear-gradient(160deg,#14092a 0%,#241040 48%,#0e1b33 100%);
+    padding:40px 16px 60px;
+  }
+  .edit-header{ text-align:center; margin-bottom:26px; }
+  .edit-header h1{
+    margin:0;
+    font-size:clamp(26px,6vw,42px);
+    font-weight:800;
+    letter-spacing:.04em;
+    background:linear-gradient(120deg,#ffd76a,#ff9ecd 55%,#ffb3c6);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+    text-shadow:0 0 40px rgba(255,158,205,.15);
+  }
+  .edit-header .subtitle{
+    margin:10px 0 0;
+    color:var(--text-dim);
+    font-size:14px;
+  }
+  .edit-container{ max-width:640px; margin:0 auto; }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:18px;
+    margin:0 0 18px;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .card label{
+    display:block;
+    color:var(--gold);
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  .card input[type=text], .card textarea{
+    width:100%;
+    background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;
+    color:var(--text);
+    padding:12px 14px;
+    font-size:15px;
+    font-family:inherit;
+    resize:vertical;
+    transition:.2s;
+  }
+  .card input[type=text]:focus, .card textarea:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(255,158,205,.15);
+  }
+  .card textarea{ line-height:1.7; }
+
+  /* 上传区 */
+  #uploadZone{
+    border:2px dashed rgba(255,158,205,.45);
+    border-radius:14px;
+    padding:32px 16px;
+    text-align:center;
+    cursor:pointer;
+    background:rgba(255,255,255,.03);
+    transition:.2s;
+  }
+  #uploadZone:hover, #uploadZone.dragover{
+    border-color:var(--gold);
+    background:rgba(255,215,106,.07);
+  }
+  .upload-icon{ font-size:34px; color:var(--gold); line-height:1; }
+  #uploadZone p{ margin:10px 0 0; font-size:15px; }
+  .upload-hint{ color:var(--text-dim); font-size:12px !important; }
+
+  /* 缩略图网格 */
+  #photoGrid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+    gap:12px;
+    margin-top:16px;
+  }
+  .photo-item{
+    position:relative;
+    aspect-ratio:1/1;
+    border-radius:12px;
+    overflow:hidden;
+    border:2px solid rgba(255,255,255,.14);
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+  }
+  .photo-item img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    -webkit-user-drag:none; pointer-events:none;
+  }
+  .photo-del{
+    position:absolute; top:6px; right:6px;
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(0,0,0,.55); color:#fff;
+    border:none; line-height:22px; text-align:center;
+    font-size:16px; cursor:pointer;
+  }
+  .photo-item.dragging{ visibility:hidden; }
+  .ghost{
+    position:fixed; z-index:9999; pointer-events:none;
+    transform:translate(-50%,-50%); opacity:.85;
+    border-radius:12px; overflow:hidden;
+    border:2px solid var(--gold);
+    box-shadow:0 10px 26px rgba(0,0,0,.5);
+  }
+  .ghost img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+  /* 底部按钮 */
+  .actions{
+    display:flex; gap:14px;
+    max-width:640px; margin:0 auto;
+    padding:6px 0 0;
+  }
+  .btn{
+    flex:1; padding:14px; font-size:17px; font-weight:700;
+    border-radius:12px; border:none; cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-primary{
+    background:linear-gradient(120deg,#ff9ecd,#ff7ab8);
+    color:#3a0d22;
+    box-shadow:0 6px 20px rgba(255,122,184,.35);
+  }
+  .btn-secondary{
+    background:rgba(255,255,255,.08);
+    color:var(--text);
+    border:1px solid rgba(255,158,205,.35);
+  }
+  .btn:active{ transform:scale(.97); }
+
+  /* ============ 播放模式 ============ */
+  #playMode{
+    position:fixed; inset:0; overflow:hidden;
+    background:linear-gradient(160deg,#160a2e,#2b1042 50%,#0d1b33);
+    user-select:none;
+  }
+  #bgCanvas{ position:absolute; inset:0; z-index:0; }
+  #fxCanvas{ position:absolute; inset:0; z-index:1; }
+  .play-vignette{
+    position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 38%, transparent 42%, rgba(0,0,0,.55) 100%);
+  }
+  #giftWrap{
+    position:absolute; left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center; z-index:5;
+    cursor:pointer;
+    transition:opacity .5s ease;
+  }
+  #giftWrap.faded{ opacity:0; }
+
+  /* ---- 礼物盒（纯 CSS） ---- */
+  .gift{ position:relative; width:200px; height:190px; margin:0 auto; animation:giftFloat 3.2s ease-in-out infinite; }
+  .gift::after{
+    content:""; position:absolute; inset:-30px; z-index:0; pointer-events:none;
+    background:radial-gradient(circle, rgba(255,183,197,.5), transparent 65%);
+    filter:blur(18px);
+    animation:glowPulse 2.4s ease-in-out infinite;
+  }
+  .gift-lid{
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:232px; height:64px; z-index:3;
+    background:linear-gradient(180deg,#ffb3c6,#ff7ab8 60%,#e85a96);
+    border:2px solid rgba(255,215,106,.85);
+    border-radius:10px 10px 4px 4px;
+    box-shadow:0 6px 14px rgba(0,0,0,.35), inset 0 2px 4px rgba(255,255,255,.4);
+  }
+  .gift-base{
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:200px; height:132px; z-index:1;
+    background:linear-gradient(180deg,#ff9ec0,#ff6ea8 60%,#e24d8f);
+    border:2px solid rgba(255,158,205,.65);
+    border-radius:6px;
+    box-shadow:inset 0 -10px 20px rgba(0,0,0,.22);
+  }
+  .ribbon-v{
+    position:absolute; top:0; bottom:0; left:50%; transform:translateX(-50%);
+    width:36px;
+    background:linear-gradient(180deg,#ffe08a,#f5b84a 50%,#e09a3a);
+    box-shadow:inset 0 0 6px rgba(0,0,0,.15);
+  }
+  .ribbon-h{
+    position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
+    height:36px;
+    background:linear-gradient(90deg,#ffe08a,#f5b84a 50%,#e09a3a);
+    box-shadow:inset 0 0 6px rgba(0,0,0,.15);
+  }
+  .gift-bow{ position:absolute; left:50%; top:-30px; transform:translateX(-50%); width:130px; height:60px; z-index:4; }
+  .bow-loop{
+    position:absolute; top:4px; width:54px; height:38px;
+    background:linear-gradient(160deg,#ffe08a,#f0ad3e 70%,#dd9634);
+    border:2px solid #fce6b8; border-radius:50%;
+    box-shadow:inset 0 -5px 8px rgba(0,0,0,.15), inset 0 4px 6px rgba(255,255,255,.4);
+  }
+  .bow-loop.left{ left:2px; transform:rotate(-16deg); }
+  .bow-loop.right{ right:2px; transform:rotate(16deg); }
+  .bow-knot{
+    position:absolute; left:50%; top:14px; transform:translateX(-50%);
+    width:32px; height:28px; z-index:5;
+    background:radial-gradient(circle at 40% 35%, #ffe6a0, #efad3c);
+    border:2px solid #fce6b8; border-radius:50%;
+    box-shadow:0 3px 6px rgba(0,0,0,.25);
+  }
+  .bow-tail{
+    position:absolute; top:34px; width:16px; height:26px;
+    background:linear-gradient(180deg,#f0ad3e,#dd9634);
+    border:1px solid #fce6b8; border-radius:3px;
+  }
+  .bow-tail.left{ left:44px; transform:rotate(8deg); }
+  .bow-tail.right{ right:44px; transform:rotate(-8deg); }
+
+  #giftHint{
+    margin-top:18px;
+    font-size:16px; letter-spacing:.2em;
+    color:#ffe6ec;
+    animation:hintBreath 1.6s ease-in-out infinite;
+  }
+
+  /* ---- 文字 ---- */
+  #titleWrap{
+    position:absolute; z-index:6;
+    display:flex; align-items:center; justify-content:center;
+    line-height:1; white-space:nowrap;
+    font-weight:800;
+    color:#fff7e0;
+    letter-spacing:.06em;
+    opacity:0;
+    transition:opacity .7s ease;
+  }
+  #titleWrap.show{
+    opacity:1;
+    animation:titleBreath 2.8s ease-in-out 1s infinite;
+  }
+  #nameLine{
+    position:absolute; left:50%; top:60%;
+    transform:translateX(-50%);
+    z-index:6; text-align:center;
+    font-size:clamp(18px,4.5vw,24px);
+    color:#ffe6ec;
+    opacity:0;
+    transition:opacity .8s ease, transform .8s ease;
+  }
+  #nameLine.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #enterHint{
+    position:absolute; left:50%; top:69%;
+    transform:translateX(-50%);
+    z-index:6;
+    font-size:14px; letter-spacing:.25em;
+    color:#d9c3e0;
+    opacity:0;
+    transition:opacity .8s ease;
+  }
+  #enterHint.show{ opacity:1; animation:hintBreath 2s ease-in-out .9s infinite; }
+
+  #backBtn{
+    position:absolute; top:14px; right:14px; z-index:10;
+    background:rgba(255,255,255,.08);
+    color:#e8d9f2;
+    border:1px solid rgba(255,158,205,.3);
+    padding:8px 14px; border-radius:20px; cursor:pointer;
+    font-size:13px; font-family:inherit;
+  }
+  #toast{
+    position:absolute; left:50%; bottom:80px; transform:translateX(-50%);
+    z-index:20; max-width:80vw;
+    background:rgba(0,0,0,.72); color:#fff;
+    padding:10px 20px; border-radius:24px; font-size:14px;
+    opacity:0; transition:opacity .3s; pointer-events:none;
+  }
+  #toast.show{ opacity:1; }
+
+  /* ============ 第二页：祝福雨 ============ */
+  #blessLayer{
+    position:absolute; inset:0; z-index:4; overflow:hidden;
+  }
+  .bless-card{
+    position:absolute;
+    padding:10px 16px;
+    border-radius:14px;
+    border:1px solid rgba(255,215,106,.5);
+    color:#fff3e0;
+    font-size:clamp(12px,3.6vw,15px);
+    font-weight:600;
+    white-space:nowrap;
+    letter-spacing:.04em;
+    background:linear-gradient(135deg, rgba(255,183,110,.18), rgba(255,122,184,.14));
+    box-shadow:0 0 16px rgba(255,158,205,.32), inset 0 0 12px rgba(255,255,255,.06);
+    text-shadow:0 0 8px rgba(255,183,197,.6);
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+    will-change:transform;
+    pointer-events:none;
+  }
+  .bless-card.settled{ animation:blessIdle 3.2s ease-in-out infinite; }
+  @keyframes blessIdle{
+    0%,100%{ margin-top:0; }
+    50%{ margin-top:-8px; }
+  }
+
+  /* ============ 第三页：照片爱心 ============ */
+  #heartLayer{
+    position:absolute; inset:0; z-index:4; overflow:hidden;
+  }
+  #heartWrap{
+    position:absolute; inset:0;
+    transform-origin:50% 40%;
+  }
+  #heartWrap.breathing{ animation:heartBreath 3.4s ease-in-out infinite; }
+  @keyframes heartBreath{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.035); }
+  }
+  .heart-photo{
+    position:absolute;
+    width:var(--size); height:var(--size);
+    border-radius:14px;
+    border:2px solid rgba(255,255,255,.75);
+    box-shadow:0 8px 20px rgba(0,0,0,.35), 0 0 14px rgba(255,158,205,.25);
+    background:linear-gradient(135deg,#ff9ecd,#ffd76a);
+    opacity:0;
+    animation:photoFlyIn .9s cubic-bezier(.2,.8,.25,1) forwards;
+    animation-delay:var(--delay,0ms);
+  }
+  .heart-photo img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    border-radius:12px;
+    -webkit-user-drag:none; pointer-events:none;
+  }
+  @keyframes photoFlyIn{
+    from{ transform:translate(var(--sx,0px), var(--sy,0px)) scale(.5) rotate(calc(var(--rot,0deg) + 40deg)); opacity:0; }
+    to{ transform:translate(0,0) scale(1) rotate(var(--rot,0deg)); opacity:1; }
+  }
+
+  /* ---- 最后一段话 ---- */
+  #lastMsg{
+    position:absolute; left:50%; bottom:8%;
+    transform:translateX(-50%) translateY(10px);
+    z-index:6; max-width:84vw; text-align:center;
+    color:#ffe6ec;
+    font-size:clamp(16px,4.6vw,20px);
+    line-height:1.9;
+    padding:16px 22px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,158,205,.32);
+    border-radius:16px;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    text-shadow:0 0 18px rgba(255,158,205,.45);
+    opacity:0;
+    transition:opacity 1s ease, transform 1s ease;
+  }
+  #lastMsg.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---- 翻页提示（底部） ---- */
+  #advanceHint{
+    position:absolute; left:50%; bottom:9%; transform:translateX(-50%);
+    z-index:6; font-size:14px; letter-spacing:.25em; color:#d9c3e0;
+    opacity:0; transition:opacity .8s ease;
+    white-space:nowrap;
+  }
+  #advanceHint.show{ opacity:1; animation:hintBreath 2s ease-in-out .3s infinite; }
+
+  /* 导出成品：自动隐藏编辑界面与返回按钮 */
+  html.bb-standalone #editMode{ display:none !important; }
+  html.bb-standalone #backBtn{ display:none !important; }
+
+  /* ---- 动画 ---- */
+  @keyframes giftFloat{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-14px);} }
+  @keyframes glowPulse{ 0%,100%{ opacity:.5; transform:scale(.96);} 50%{ opacity:1; transform:scale(1.06);} }
+  @keyframes hintBreath{ 0%,100%{ opacity:.35;} 50%{ opacity:1;} }
+  @keyframes titleBreath{
+    0%,100%{ text-shadow:0 0 14px rgba(255,183,197,.8),0 0 34px rgba(255,158,205,.55),0 0 60px rgba(255,215,106,.45); }
+    50%{ text-shadow:0 0 26px rgba(255,183,197,1),0 0 60px rgba(255,158,205,.9),0 0 110px rgba(255,215,106,.8); }
+  }
+  .gift.shaking{ animation:giftShake .5s ease-in-out; }
+  @keyframes giftShake{
+    0%,100%{ transform:translateY(0) rotate(0); }
+    15%{ transform:translateX(-8px) rotate(-4deg); }
+    30%{ transform:translateX(8px) rotate(4deg); }
+    45%{ transform:translateX(-6px) rotate(-3deg); }
+    60%{ transform:translateX(6px) rotate(3deg); }
+    75%{ transform:translateX(-3px) rotate(-1deg); }
+    90%{ transform:translateX(3px) rotate(1deg); }
+  }
+  .gift.opening{ animation:none; }
+  .gift.opening .gift-lid{ animation:lidFly .9s ease-in forwards; }
+  @keyframes lidFly{
+    0%{ transform:translateX(-50%) translateY(0) rotate(0); opacity:1; }
+    100%{ transform:translateX(-50%) translateY(-260px) rotate(720deg); opacity:0; }
+  }
+  .gift.opening .gift-base{ animation:baseFade .9s ease-in forwards; }
+  @keyframes baseFade{ to{ opacity:0; transform:translateX(-50%) scale(.8);} }
+
+  /* 手机端适配 */
+  @media (max-width:480px){
+    #editMode{ padding:28px 12px 48px; }
+    .gift{ transform:scale(.82); transform-origin:top center; }
+    .bless-card{ padding:8px 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 编辑模式 ================= -->
+<div id="editMode">
+  <header class="edit-header">
+    <h1>生日祝福制作器</h1>
+    <p class="subtitle">上传照片，写下祝福，一键生成专属生日动画</p>
+  </header>
+
+  <div class="edit-container">
+    <section class="card">
+      <label>收礼人姓名</label>
+      <input id="nameInput" type="text" placeholder="填写后，第一页会显示 TA 的名字">
+    </section>
+
+    <section class="card">
+      <label>主标题</label>
+      <input id="titleInput" type="text" value="生日快乐">
+    </section>
+
+    <section class="card">
+      <label>祝福词（一行一条，用于后续翻页）</label>
+      <textarea id="blessInput" rows="9"></textarea>
+    </section>
+
+    <section class="card">
+      <label>最后一段话（显示在照片爱心之后）</label>
+      <textarea id="lastInput" rows="4"></textarea>
+    </section>
+
+    <section class="card">
+      <label>照片（长边自动压缩到 800px）</label>
+      <div id="uploadZone">
+        <div class="upload-icon">＋</div>
+        <p>点击选择照片，或把照片拖到这里</p>
+        <p class="upload-hint">支持多选 · 按住拖动可排序 · 刷新不丢失</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      </div>
+      <div id="photoGrid"></div>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button id="previewBtn" class="btn btn-primary">预览</button>
+    <button id="exportBtn" class="btn btn-secondary">导出</button>
+  </div>
+</div>
+
+<!-- ================= 播放模式 ================= -->
+<div id="playMode" class="hidden">
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="fxCanvas"></canvas>
+  <div class="play-vignette"></div>
+
+  <div id="giftWrap">
+    <div id="giftBox" class="gift">
+      <div class="gift-lid">
+        <div class="ribbon-v"></div>
+        <div class="gift-bow">
+          <span class="bow-loop left"></span>
+          <span class="bow-loop right"></span>
+          <span class="bow-tail left"></span>
+          <span class="bow-tail right"></span>
+          <span class="bow-knot"></span>
+        </div>
+      </div>
+      <div class="gift-base">
+        <div class="ribbon-v"></div>
+        <div class="ribbon-h"></div>
+      </div>
+    </div>
+    <div id="giftHint">点击打开礼物</div>
+  </div>
+
+  <div id="titleWrap" class="hidden"></div>
+  <div id="nameLine" class="hidden"></div>
+  <div id="enterHint" class="hidden">按回车继续</div>
+
+  <div id="blessLayer" class="hidden"></div>
+  <div id="heartLayer" class="hidden">
+    <div id="heartWrap"></div>
+  </div>
+  <div id="lastMsg" class="hidden"></div>
+  <div id="advanceHint" class="hidden">按回车继续</div>
+
+  <button id="backBtn">返回编辑</button>
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   生日祝福制作器 —— 纯 HTML+CSS+JS，无外部库
+   编辑模式（上传/填写）、播放模式（三页动画）、单文件导出
+   ============================================================ */
+
+/* ---------- 元素引用 ---------- */
+const editMode   = document.getElementById('editMode');
+const playMode   = document.getElementById('playMode');
+const nameInput  = document.getElementById('nameInput');
+const titleInput = document.getElementById('titleInput');
+const blessInput = document.getElementById('blessInput');
+const lastInput  = document.getElementById('lastInput');
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+const photoGrid  = document.getElementById('photoGrid');
+const previewBtn = document.getElementById('previewBtn');
+const exportBtn  = document.getElementById('exportBtn');
+const giftWrap   = document.getElementById('giftWrap');
+const giftBox    = document.getElementById('giftBox');
+const titleWrap  = document.getElementById('titleWrap');
+const nameLine   = document.getElementById('nameLine');
+const enterHint  = document.getElementById('enterHint');
+const backBtn    = document.getElementById('backBtn');
+const toast      = document.getElementById('toast');
+const bgCanvas   = document.getElementById('bgCanvas');
+const fxCanvas   = document.getElementById('fxCanvas');
+const blessLayer = document.getElementById('blessLayer');
+const heartLayer = document.getElementById('heartLayer');
+const heartWrap  = document.getElementById('heartWrap');
+const lastMsg    = document.getElementById('lastMsg');
+const advanceHint = document.getElementById('advanceHint');
+
+/* ---------- 默认内容 ---------- */
+const defaultBlessings = [
+  '愿你的每一天都充满阳光和欢笑',
+  '祝你心想事成，万事如意',
+  '愿所有的美好都如期而至',
+  '生日快乐，天天开心',
+  '愿你眼里有光，心中有爱',
+  '愿岁月温柔待你',
+  '愿你被这个世界温柔以待',
+  '新的一岁，新的精彩',
+  '愿你所愿皆所得',
+  '愿平安喜乐，顺遂无忧',
+  '愿你前程似锦，未来可期',
+  '愿好运常伴你左右',
+  '愿健康常伴，岁岁常欢愉',
+  '愿你的笑容永远灿烂',
+  '愿生活明朗，万物可爱',
+  '愿一切美好与你环环相扣',
+  '愿你做自己的太阳，无需凭借谁的光',
+  '愿岁岁平安，年年如意'
+].join('\n');
+
+const defaultLast = '愿你的生日如星光般璀璨，愿往后的每一天都被温柔与爱填满。';
+
+/* ---------- 表单偏好：localStorage 持久化 ---------- */
+const LS = { name:'bbm_name', title:'bbm_title', bless:'bbm_blessings', last:'bbm_last' };
+function loadPrefs(){
+  nameInput.value  = localStorage.getItem(LS.name)  || '';
+  titleInput.value = localStorage.getItem(LS.title) || '生日快乐';
+  blessInput.value = localStorage.getItem(LS.bless) || defaultBlessings;
+  lastInput.value  = localStorage.getItem(LS.last)  || defaultLast;
+}
+function savePrefs(){
+  localStorage.setItem(LS.name,  nameInput.value);
+  localStorage.setItem(LS.title, titleInput.value);
+  localStorage.setItem(LS.bless, blessInput.value);
+  localStorage.setItem(LS.last,  lastInput.value);
+}
+[nameInput, titleInput, blessInput, lastInput].forEach(el => el.addEventListener('input', savePrefs));
+
+/* ---------- 照片存储：IndexedDB 为主，localStorage 兜底 ---------- */
+const DB_NAME = 'birthdayMakerDB';
+const STORE   = 'photos';
+let photos = [];   // [{id, data, order}]
+let nextId = 1;
+let useIDB = false;
+
+async function initStorage(){
+  try{
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if(!d.objectStoreNames.contains(STORE)){
+          const s = d.createObjectStore(STORE, { keyPath:'id' });
+          s.createIndex('order', 'order');
+        }
+      };
+      req.onsuccess = e => { window.__bbm_db = e.target.result; resolve(); };
+      req.onerror   = () => reject(req.error);
+    });
+    useIDB = true;
+    photos = await new Promise((res, rej) => {
+      const tx = window.__bbm_db.transaction(STORE, 'readonly');
+      const r  = tx.objectStore(STORE).getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror   = () => rej(r.error);
+    });
+  }catch(e){
+    // IndexedDB 不可用（如部分浏览器 file:// 受限）时，退回 localStorage
+    useIDB = false;
+    const saved = localStorage.getItem('bbm_photos');
+    photos = saved ? (JSON.parse(saved) || []) : [];
+  }
+  if(photos.length) nextId = Math.max(...photos.map(p => p.id)) + 1;
+}
+
+function persistAll(){
+  if(useIDB){
+    const tx = window.__bbm_db.transaction(STORE, 'readwrite');
+    const os = tx.objectStore(STORE);
+    os.clear();
+    photos.forEach(p => os.put(p));
+  }else{
+    localStorage.setItem('bbm_photos', JSON.stringify(photos));
+  }
+}
+
+/* ---------- 照片压缩：canvas 长边 800px，jpeg 0.8，转 base64 ---------- */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if(w > h){ if(w > MAX){ h = Math.round(h * MAX / w); w = MAX; } }
+        else     { if(h > MAX){ w = Math.round(w * MAX / h); h = MAX; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 上传处理 ---------- */
+async function handleFiles(files){
+  for(const f of files){
+    if(!f.type || !f.type.startsWith('image/')) continue;
+    try{
+      const data = await compressImage(f);
+      photos.push({ id: nextId++, data, order: photos.length });
+      persistAll();
+      renderGrid();
+    }catch(err){
+      console.warn('照片处理失败：', f.name, err);
+    }
+  }
+}
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  handleFiles(e.target.files);
+  fileInput.value = '';   // 允许重复选择同一文件
+});
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if(e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+});
+
+/* ---------- 缩略图网格渲染 ---------- */
+function renderGrid(){
+  photoGrid.innerHTML = '';
+  const items = [...photos].sort((a, b) => a.order - b.order);
+  for(const rec of items){
+    const div = document.createElement('div');
+    div.className = 'photo-item';
+    div.dataset.id = rec.id;
+
+    const img = document.createElement('img');
+    img.src = rec.data;
+    img.alt = '照片';
+    img.draggable = false;
+
+    const del = document.createElement('button');
+    del.className = 'photo-del';
+    del.type = 'button';
+    del.textContent = '×';
+    del.title = '删除';
+    del.addEventListener('click', e => {
+      e.stopPropagation();
+      photos = photos.filter(p => p.id !== rec.id);
+      photos.forEach((p, i) => p.order = i);
+      persistAll();
+      renderGrid();
+    });
+
+    div.appendChild(img);
+    div.appendChild(del);
+    photoGrid.appendChild(div);
+  }
+}
+
+/* ---------- 拖动排序（pointer 事件，桌面 + 触摸通用） ---------- */
+let dragState = null;
+photoGrid.addEventListener('pointerdown', e => {
+  const item = e.target.closest('.photo-item');
+  if(!item || e.target.closest('.photo-del')) return;
+  dragState = { item, startX:e.clientX, startY:e.clientY, active:false, pointerId:e.pointerId };
+});
+window.addEventListener('pointermove', e => {
+  if(!dragState || e.pointerId !== dragState.pointerId) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+  if(!dragState.active){
+    if(Math.hypot(dx, dy) < 8) return;
+    dragState.active = true;
+    const it = dragState.item;
+    dragState.w = it.offsetWidth;
+    dragState.h = it.offsetHeight;
+    dragState.ghost = it.cloneNode(true);
+    dragState.ghost.classList.add('ghost');
+    dragState.ghost.style.width  = dragState.w + 'px';
+    dragState.ghost.style.height = dragState.h + 'px';
+    document.body.appendChild(dragState.ghost);
+    it.classList.add('dragging');
+  }
+  dragState.ghost.style.left = e.clientX + 'px';
+  dragState.ghost.style.top  = e.clientY + 'px';
+
+  // 找到指针下方最近的缩略图，实时调整顺序
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const target = under && under.closest('.photo-item');
+  if(target && target !== dragState.item){
+    const r = target.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const sameRow = Math.abs(e.clientY - cy) < r.height / 2;
+    const before = sameRow ? (e.clientX < cx) : (e.clientY < cy);
+    if(before) photoGrid.insertBefore(dragState.item, target);
+    else       photoGrid.insertBefore(dragState.item, target.nextSibling);
+  }
+});
+window.addEventListener('pointerup', e => {
+  if(!dragState || e.pointerId !== dragState.pointerId) return;
+  if(dragState.active){
+    dragState.ghost.remove();
+    dragState.item.classList.remove('dragging');
+    // 依据 DOM 顺序持久化
+    const ids = [...photoGrid.querySelectorAll('.photo-item')].map(n => Number(n.dataset.id));
+    const m = new Map(photos.map(p => [p.id, p]));
+    photos = ids.map((id, i) => { const r = m.get(id); r.order = i; return r; });
+    persistAll();
+  }
+  dragState = null;
+});
+
+/* ---------- 预览 / 导出 ---------- */
+previewBtn.addEventListener('click', startPreview);
+exportBtn.addEventListener('click', doExport);
+
+backBtn.addEventListener('click', goBack);
+window.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && !playMode.classList.contains('hidden') && !window.BB_STANDALONE) goBack();
+  if(e.key === 'Enter') handleAdvance();
+});
+
+/* 翻页推进：回车 / 点击 / 上滑 统一入口 */
+let advanceResolver = null;
+function waitAdvance(){ return new Promise(r => { advanceResolver = r; }); }
+function handleAdvance(){
+  if(advanceResolver){ const r = advanceResolver; advanceResolver = null; r(); }
+}
+playMode.addEventListener('click', e => {
+  if(e.target.closest('#backBtn')) return;
+  handleAdvance();
+});
+let touchStartY = null;
+playMode.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive:true });
+playMode.addEventListener('touchend', e => {
+  if(touchStartY == null) return;
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  touchStartY = null;
+  if(dy > 60) handleAdvance();   // 上滑翻页
+});
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+/* ---------- rAF 统一管理（便于退出时全部停止） ---------- */
+let playActive = false;
+let seqToken = 0;   // 播放流程令牌，退出后使旧流程失效
+let activeRafs = new Set();
+function raf(cb){
+  const id = requestAnimationFrame(ts => { activeRafs.delete(id); cb(ts); });
+  activeRafs.add(id);
+  return id;
+}
+function cancelAllRafs(){
+  activeRafs.forEach(id => cancelAnimationFrame(id));
+  activeRafs.clear();
+}
+
+/* ---------- 画布 ---------- */
+function resizeCanvases(){
+  [bgCanvas, fxCanvas].forEach(c => {
+    const dpr = window.devicePixelRatio || 1;
+    c.width  = Math.floor(innerWidth  * dpr);
+    c.height = Math.floor(innerHeight * dpr);
+    c.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+  });
+}
+window.addEventListener('resize', () => {
+  if(playActive) resizeCanvases();
+});
+
+function clearFx(){
+  fxCanvas.getContext('2d').clearRect(0, 0, innerWidth, innerHeight);
+}
+
+/* ---------- 背景：漂浮光点 + 飘落星光 ---------- */
+function startBackground(){
+  const ctx = bgCanvas.getContext('2d');
+  const dots = [], stars = [];
+  for(let i = 0; i < 46; i++){
+    dots.push({
+      x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+      r: .7 + Math.random() * 1.9,
+      vy: .12 + Math.random() * .28,
+      sway: Math.random() * Math.PI * 2,
+      base: .25 + Math.random() * .5,
+      tw: Math.random() * Math.PI * 2,
+      ts: .008 + Math.random() * .025
+    });
+  }
+  for(let i = 0; i < 36; i++){
+    stars.push({
+      x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+      len: 14 + Math.random() * 34,
+      vy: .5 + Math.random() * 1.5,
+      slope: (Math.random() - .5) * .5,
+      alpha: .2 + Math.random() * .5
+    });
+  }
+  function frame(){
+    if(!playActive) return;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+    for(const d of dots){
+      d.y -= d.vy;
+      d.x += Math.sin(d.sway) * .15;
+      d.sway += .01;
+      d.tw += d.ts;
+      if(d.y < -5){ d.y = innerHeight + 5; d.x = Math.random() * innerWidth; }
+      if(d.x < -5) d.x = innerWidth + 5;
+      else if(d.x > innerWidth + 5) d.x = -5;
+      ctx.globalAlpha = Math.max(0, d.base * (0.5 + 0.5 * Math.sin(d.tw)));
+      ctx.fillStyle = '#ffd9c9';
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+    }
+    for(const s of stars){
+      s.y += s.vy;
+      s.x += s.slope;
+      if(s.y > innerHeight + s.len){ s.y = -s.len; s.x = Math.random() * innerWidth; }
+      const grad = ctx.createLinearGradient(s.x, s.y - s.len, s.x, s.y);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, `rgba(255,220,200,${s.alpha})`);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(s.x, s.y - s.len); ctx.lineTo(s.x, s.y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    raf(frame);
+  }
+  raf(frame);
+}
+
+/* ---------- 打开瞬间：烟花 + 粒子光效 ---------- */
+function spawnBurst(cx, cy){
+  const ctx = fxCanvas.getContext('2d');
+  const colors = ['#ffd76a', '#ff9ecd', '#fff3e0', '#ff7ab8', '#ffe29a'];
+  const parts = [];
+  // 火花
+  for(let i = 0; i < 80; i++){
+    const a = Math.random() * Math.PI * 2;
+    const sp = 2 + Math.random() * 8;
+    parts.push({
+      x: cx, y: cy,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.5,
+      g: .16, life: 1, decay: .012 + Math.random() * .02,
+      r: 1.2 + Math.random() * 2.4,
+      color: colors[i % colors.length]
+    });
+  }
+  // 同心圆环
+  for(let ring = 0; ring < 3; ring++){
+    const rr = 40 + ring * 30, n = 24, phase = ring * .12;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      parts.push({
+        x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr,
+        vx: Math.cos(a) * (1.2 + ring * .5), vy: Math.sin(a) * (1.2 + ring * .5),
+        g: 0, life: 1, decay: .025,
+        r: 2 + ring * .6,
+        color: colors[ring], delay: phase
+      });
+    }
+  }
+  const start = performance.now();
+  function loop(now){
+    const tGlow = (now - start) / 1000;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+    // 开场闪光
+    if(tGlow < .35){
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 140);
+      g.addColorStop(0, 'rgba(255,220,180,.8)');
+      g.addColorStop(1, 'rgba(255,158,205,0)');
+      ctx.globalAlpha = 1 - tGlow / .35;
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+      ctx.globalAlpha = 1;
+    }
+
+    let alive = false;
+    for(const p of parts){
+      const t = (now - start) / 1000 - (p.delay || 0);
+      if(t < 0){ alive = true; continue; }
+      p.x += p.vx; p.y += p.vy; p.vy += p.g;
+      p.vx *= .985; p.vy *= .985;
+      p.life -= p.decay;
+      if(p.life <= 0) continue;
+      alive = true;
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if(alive) raf(loop);
+  }
+  raf(loop);
+}
+
+/* ---------- 采样标题文字为点阵（按字符分组） ---------- */
+function sampleTitle(title, fontSize){
+  const chars = Array.from(title);
+  const font = `800 ${fontSize}px "PingFang SC","Microsoft YaHei",sans-serif`;
+  const tmp = document.createElement('canvas').getContext('2d');
+  tmp.font = font;
+  tmp.textBaseline = 'middle';
+  tmp.textAlign = 'left';
+
+  // 每个字的宽度，用于按字分组
+  const advances = chars.map(ch => tmp.measureText(ch).width);
+  const totalW = advances.reduce((a, b) => a + b, 0);
+  const canvasW = Math.max(1, Math.ceil(totalW));
+  const canvasH = Math.ceil(fontSize * 1.35);
+
+  const c = document.createElement('canvas');
+  c.width = canvasW; c.height = canvasH;
+  const ctx = c.getContext('2d');
+  ctx.font = font;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(title, 0, canvasH / 2);
+
+  const data = ctx.getImageData(0, 0, canvasW, canvasH).data;
+  const cum = [0];
+  for(let i = 0; i < advances.length; i++) cum.push(cum[i] + advances[i]);
+
+  const groups = chars.map(() => []);
+  const step = 3;   // 采样步长，越大粒子越少
+  for(let y = 0; y < canvasH; y += step){
+    for(let x = 0; x < canvasW; x += step){
+      if(data[(y * canvasW + x) * 4 + 3] > 128){
+        let ci = 0;
+        for(let k = 0; k < advances.length; k++){
+          if(x >= cum[k] && x < cum[k + 1]){ ci = k; break; }
+          if(x >= cum[k]) ci = k;
+        }
+        groups[ci].push({ x, y });
+      }
+    }
+  }
+  return { groups, canvasW, canvasH };
+}
+
+function randomStart(cx, cy){
+  const minR = Math.min(innerWidth, innerHeight) * .35;
+  const maxR = Math.max(innerWidth, innerHeight) * .75;
+  const ang = Math.random() * Math.PI * 2;
+  const r = minR + Math.random() * (maxR - minR);
+  return { x: cx + Math.cos(ang) * r, y: cy + Math.sin(ang) * r };
+}
+
+/* ---------- 粒子汇聚拼出主标题（约 2 秒，逐字成形） ---------- */
+function formTitle(title){
+  return new Promise(resolve => {
+    const charCount = Math.max(1, Array.from(title).length);
+    const fontSize = Math.max(34, Math.min(96, Math.floor(innerWidth / charCount * 1.6)));
+    const { groups, canvasW, canvasH } = sampleTitle(title, fontSize);
+
+    const cx = innerWidth / 2;
+    const cy = innerHeight * .42;   // 标题整体略靠上，给下方留出空间
+
+    // 设置真实标题元素，与采样画布同尺寸同字体，保证粒子落点与最终文字重合
+    titleWrap.style.width = canvasW + 'px';
+    titleWrap.style.height = canvasH + 'px';
+    titleWrap.style.left = (cx - canvasW / 2) + 'px';
+    titleWrap.style.top  = (cy - canvasH / 2) + 'px';
+    titleWrap.style.fontSize = fontSize + 'px';
+    titleWrap.textContent = title;
+
+    const ctx = fxCanvas.getContext('2d');
+    const colors = ['#ffd76a', '#ff9ecd', '#fff3e0', '#ffb3c6', '#ff7ab8'];
+
+    // 生成粒子：每个采样点一个，起点在四周随机，逐字延迟
+    const stagger = Math.min(200, Math.floor(1200 / charCount));
+    const particles = [];
+    for(let ci = 0; ci < groups.length; ci++){
+      for(const pt of groups[ci]){
+        const s = randomStart(cx, cy);
+        particles.push({
+          sx: s.x, sy: s.y,
+          tx: cx - canvasW / 2 + pt.x,
+          ty: cy - canvasH / 2 + pt.y,
+          delay: ci * stagger + Math.random() * 120,
+          dur: 1300 + Math.random() * 500,
+          color: colors[(Math.random() * colors.length) | 0],
+          r: 1.4 + Math.random() * 1.6
+        });
+      }
+    }
+
+    const start = performance.now();
+    let phase = 'form';   // form -> hold
+    let holdStart = 0;
+
+    function frame(now){
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      const t = now - start;
+      let anyForming = false;
+
+      for(const p of particles){
+        const local = t - p.delay;
+        if(local < 0){ anyForming = true; continue; }
+        const e = Math.min(1, local / p.dur);
+        if(e < 1) anyForming = true;
+        const ease = 1 - Math.pow(1 - e, 3);   // easeOutCubic
+        const x = p.sx + (p.tx - p.sx) * ease;
+        const y = p.sy + (p.ty - p.sy) * ease;
+        ctx.globalAlpha = .9;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(x, y, p.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      if(phase === 'form' && !anyForming){
+        // 拼完后粒子定格，同时淡入真实文字（带发光呼吸）
+        phase = 'hold';
+        holdStart = now;
+        titleWrap.classList.remove('hidden');
+        requestAnimationFrame(() => titleWrap.classList.add('show'));
+      }
+      if(phase === 'hold'){
+        if(now - holdStart > 400){
+          ctx.clearRect(0, 0, innerWidth, innerHeight);
+          resolve();
+          return;
+        }
+      }
+      raf(frame);
+    }
+    raf(frame);
+  });
+}
+
+/* ---------- 播放流程 ---------- */
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// 播放流程是否已失效（退出或重新预览）
+function stale(token){ return token !== seqToken || !playActive; }
+
+function waitGiftClick(){
+  return new Promise(resolve => {
+    const handler = () => { giftWrap.removeEventListener('click', handler); resolve(); };
+    giftWrap.addEventListener('click', handler);
+  });
+}
+
+function playGiftOpen(){
+  return new Promise(resolve => {
+    giftBox.classList.add('shaking');
+    setTimeout(() => {
+      giftBox.classList.remove('shaking');
+      giftBox.classList.add('opening');
+      const r = giftBox.getBoundingClientRect();
+      spawnBurst(r.left + r.width / 2, r.top + r.height / 2);
+      setTimeout(() => {
+        giftWrap.classList.add('faded');
+        resolve();
+      }, 950);
+    }, 520);
+  });
+}
+
+// 淡出元素（去掉 .show 触发过渡，随后隐藏）
+function fadeOut(el){
+  el.classList.remove('show');
+  return new Promise(r => setTimeout(() => { el.classList.add('hidden'); r(); }, 760));
+}
+
+// 复位第二、三页的图层
+function resetPlayLayers(){
+  blessLayer.innerHTML = '';
+  blessLayer.classList.add('hidden');
+  heartWrap.innerHTML = '';
+  heartWrap.classList.remove('breathing');
+  heartLayer.classList.add('hidden');
+  lastMsg.classList.add('hidden'); lastMsg.classList.remove('show');
+  advanceHint.classList.add('hidden'); advanceHint.classList.remove('show');
+}
+
+async function startSequence(token){
+  const title = (titleInput.value || '生日快乐').trim();
+  const name  = nameInput.value.trim();
+  const blessings = blessInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+  const last = lastInput.value.trim() || defaultLast;
+  const photoData = [...photos].sort((a, b) => a.order - b.order).map(p => p.data);
+
+  // 复位到礼物页
+  resetPlayLayers();
+  giftWrap.classList.remove('faded', 'hidden');
+  giftBox.classList.remove('shaking', 'opening');
+  titleWrap.classList.add('hidden'); titleWrap.classList.remove('show');
+  nameLine.classList.add('hidden');  nameLine.classList.remove('show');
+  enterHint.classList.add('hidden'); enterHint.classList.remove('show');
+  clearFx();
+
+  await waitGiftClick();          // 点击打开礼物
+  if(stale(token)) return;
+  await playGiftOpen();           // 震动 -> 开盖 -> 烟花 -> 淡出
+  if(stale(token)) return;
+  giftWrap.classList.add('hidden');
+  await formTitle(title);         // 粒子汇聚拼标题
+  if(stale(token)) return;
+
+  // 收礼人称呼
+  nameLine.textContent = name ? `亲爱的 ${name}，祝你平安喜乐` : '祝你平安喜乐';
+  nameLine.classList.remove('hidden');
+  requestAnimationFrame(() => nameLine.classList.add('show'));
+
+  await sleep(700);
+  enterHint.classList.remove('hidden');
+  requestAnimationFrame(() => enterHint.classList.add('show'));
+
+  // ===== 第一页 -> 第二页 =====
+  await waitAdvance();
+  if(stale(token)) return;
+  await Promise.all([fadeOut(titleWrap), fadeOut(nameLine), fadeOut(enterHint)]);
+  if(stale(token)) return;
+
+  // ===== 第二页：祝福雨 =====
+  await playBlessingRain(blessings);
+  if(stale(token)) return;
+  await sleep(650);               // 全部落完后停顿一下
+  if(stale(token)) return;
+  advanceHint.textContent = '按回车继续';
+  advanceHint.classList.remove('hidden');
+  requestAnimationFrame(() => advanceHint.classList.add('show'));
+
+  // ===== 第二页 -> 第三页 =====
+  await waitAdvance();
+  if(stale(token)) return;
+  await fadeOut(advanceHint);
+  if(stale(token)) return;
+
+  // ===== 第三页：照片爱心 + 最后一段话 =====
+  await playHeart(photoData, last);
+}
+
+/* ---------- 第二页：祝福词震撼掉落 ---------- */
+function playBlessingRain(blessings){
+  return new Promise(resolve => {
+    blessLayer.innerHTML = '';
+    blessLayer.classList.remove('hidden');
+    const n = blessings.length;
+    if(!n){ resolve(); return; }
+
+    // 目标位置：随机散布，尽量不重叠
+    const targets = [];
+    const placed = [];
+    const minDist = Math.min(innerWidth, innerHeight) * 0.15;
+    for(let i = 0; i < n; i++){
+      let x, y, ok, tries = 0;
+      do{
+        x = innerWidth  * (0.06 + Math.random() * 0.88);
+        y = innerHeight * (0.08 + Math.random() * 0.80);
+        ok = true;
+        for(const p of placed){
+          if(Math.hypot(p.x - x, p.y - y) < minDist){ ok = false; break; }
+        }
+      } while(!ok && ++tries < 40);
+      placed.push({ x, y });
+      targets.push({ x, y, rot: (Math.random() - .5) * 18 });
+    }
+
+    // 生成卡片 DOM，并计算各自掉落时长
+    const cards = targets.map((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'bless-card';
+      el.textContent = blessings[i];
+      const hue = 18 + Math.random() * 34;   // 暖色系：橙 -> 粉
+      el.style.background = `linear-gradient(135deg, hsla(${hue},90%,72%,.18), hsla(${hue + 40},90%,62%,.14))`;
+      el.style.borderColor = `hsla(${hue + 8},85%,70%,.5)`;
+      el.style.boxShadow = `0 0 16px hsla(${hue + 8},90%,64%,.32), inset 0 0 12px hsla(0,0%,100%,.05)`;
+      el.style.setProperty('--rot', t.rot + 'deg');
+      blessLayer.appendChild(el);
+      const r = el.getBoundingClientRect();
+      // 收窄边界，避免卡片一半在屏幕外
+      const margin = 8;
+      t.x = Math.min(Math.max(t.x, r.width / 2 + margin), innerWidth - r.width / 2 - margin);
+      return {
+        el, t,
+        startY: -(r.height + 40),
+        dur: 900 + Math.random() * 700,
+        state: 'wait',
+        spawnAt: 0
+      };
+    });
+
+    // 掉落时刻表：前面慢、后面越来越密
+    const total = 6400;
+    cards.forEach((c, i) => {
+      const p = n <= 1 ? 0 : i / (n - 1);
+      c.spawnAt = total * Math.pow(p, 1.8);
+    });
+
+    const c1 = 1.70158, c3 = c1 + 1;
+    const easeOutBack = p => 1 + c1 * Math.pow(p - 1, 3) + c3 * Math.pow(p - 1, 2);
+
+    const start = performance.now();
+    function frame(now){
+      const el = now - start;
+      let allDone = true;
+      for(const c of cards){
+        if(c.state === 'wait'){
+          if(el >= c.spawnAt) c.state = 'fall';
+          else { allDone = false; continue; }
+        }
+        if(c.state === 'fall'){
+          const p = Math.min(1, (el - c.spawnAt) / c.dur);
+          const e = easeOutBack(p);
+          const y = c.startY + (c.t.y - c.startY) * e;
+          const rot = c.t.rot + Math.sin(p * Math.PI * 2) * (1 - p) * 8;   // 下落中轻微摆动
+          c.el.style.left = c.t.x + 'px';
+          c.el.style.top  = y + 'px';
+          c.el.style.transform = `translate(-50%,0) rotate(${rot}deg)`;
+          if(p >= 1){
+            c.state = 'settled';
+            c.el.style.top = c.t.y + 'px';
+            c.el.style.transform = `translate(-50%,0) rotate(${c.t.rot}deg)`;
+            c.el.classList.add('settled');
+          } else {
+            allDone = false;
+          }
+        }
+      }
+      if(allDone){ resolve(); return; }
+      raf(frame);
+    }
+    raf(frame);
+  });
+}
+
+/* ---------- 第三页：照片组成爱心 ---------- */
+function heartPoints(n){
+  const pts = [];
+  for(let i = 0; i < n; i++){
+    const t = (i / n) * Math.PI * 2;
+    // 标准爱心参数方程，屏幕坐标系下 y 取反使其开口朝上
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    pts.push({ x, y });
+  }
+  return pts;
+}
+
+function playHeart(photoData, lastText){
+  return new Promise(resolve => {
+    heartWrap.innerHTML = '';
+    heartWrap.classList.remove('breathing');
+    lastMsg.classList.add('hidden'); lastMsg.classList.remove('show');
+    lastMsg.textContent = lastText || '';
+    const n = photoData.length;
+
+    if(!n){
+      // 没有照片：直接展示最后一段话
+      heartLayer.classList.add('hidden');
+      if(lastText){
+        lastMsg.classList.remove('hidden');
+        requestAnimationFrame(() => lastMsg.classList.add('show'));
+      }
+      resolve();
+      return;
+    }
+
+    heartLayer.classList.remove('hidden');
+
+    const pts = heartPoints(n);
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for(const p of pts){
+      if(p.x < minX) minX = p.x;
+      if(p.x > maxX) maxX = p.x;
+      if(p.y < minY) minY = p.y;
+      if(p.y > maxY) maxY = p.y;
+    }
+    const w = (maxX - minX) || 1, h = (maxY - minY) || 1;
+    const size = Math.max(34, Math.min(64, Math.min(innerWidth, innerHeight) / 7));
+    const scale = Math.min((innerWidth * 0.82) / w, (innerHeight * 0.5) / h);
+    const cx = innerWidth / 2;
+    const cy = innerHeight * 0.40;   // 爱心略靠上，给下方文字留空间
+    const midX = (minX + maxX) / 2, midY = (minY + maxY) / 2;
+
+    const STAGGER = 150, FLY = 900;
+    for(let i = 0; i < n; i++){
+      const px = cx + (pts[i].x - midX) * scale;
+      const py = cy + (pts[i].y - midY) * scale;
+      const rot = (Math.random() - .5) * 20;      // 随机轻微旋转
+      const ang = Math.random() * Math.PI * 2;     // 随机方向飞入
+      const R = Math.max(innerWidth, innerHeight) * 0.8;
+      const sx = Math.cos(ang) * R, sy = Math.sin(ang) * R;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'heart-photo';
+      wrap.style.left = (px - size / 2) + 'px';
+      wrap.style.top  = (py - size / 2) + 'px';
+      wrap.style.setProperty('--size', size + 'px');
+      wrap.style.setProperty('--rot', rot + 'deg');
+      wrap.style.setProperty('--sx', sx + 'px');
+      wrap.style.setProperty('--sy', sy + 'px');
+      wrap.style.setProperty('--delay', (i * STAGGER) + 'ms');
+
+      const img = document.createElement('img');
+      img.src = photoData[i];
+      img.alt = '照片';
+      img.onerror = () => img.remove();   // 加载失败用占位色块代替，不白屏
+      wrap.appendChild(img);
+      heartWrap.appendChild(wrap);
+    }
+
+    // 最后一张落位后，整体开始呼吸缩放，并淡入最后一段话
+    const doneAt = (n - 1) * STAGGER + FLY + 260;
+    setTimeout(() => {
+      if(playActive) heartWrap.classList.add('breathing');
+      if(playActive && lastText){
+        lastMsg.classList.remove('hidden');
+        requestAnimationFrame(() => lastMsg.classList.add('show'));
+      }
+      resolve();
+    }, doneAt);
+  });
+}
+
+function startPreview(){
+  playActive = true;
+  const token = ++seqToken;
+  editMode.classList.add('hidden');
+  playMode.classList.remove('hidden');
+  resizeCanvases();
+  startBackground();
+  startSequence(token).catch(err => { if(token === seqToken) console.error(err); });
+}
+
+function goBack(){
+  playActive = false;
+  seqToken++;
+  cancelAllRafs();
+  clearFx();
+  resetPlayLayers();
+  playMode.classList.add('hidden');
+  editMode.classList.remove('hidden');
+}
+
+/* ---------- 导出：拼成单文件成品 ---------- */
+function doExport(){
+  const cfg = {
+    name: nameInput.value.trim(),
+    title: (titleInput.value || '生日快乐').trim(),
+    blessings: blessInput.value.split('\n').map(s => s.trim()).filter(Boolean),
+    last: lastInput.value.trim() || defaultLast,
+    photos: [...photos].sort((a, b) => a.order - b.order).map(p => p.data)
+  };
+  // JSON 里的 "<" 转义，避免注入 <script> 时被提前截断
+  const json = JSON.stringify(cfg).replace(/</g, '\\u003c');
+  // 克隆当前文档，清掉编辑区动态渲染的缩略图（避免 base64 重复进导出文件）
+  const clone = document.documentElement.cloneNode(true);
+  const grid = clone.querySelector('#photoGrid');
+  if(grid) grid.innerHTML = '';
+  const t = clone.querySelector('#toast');
+  if(t) t.textContent = '';
+
+  const src = '<!DOCTYPE html>\n' + clone.outerHTML;
+  const inject =
+    '<script>window.BB_CONFIG=' + json +
+    ';window.BB_STANDALONE=true;document.documentElement.classList.add(\'bb-standalone\');</scr' + 'ipt>';
+  const html = src.replace('</head>', inject + '\n</head>');
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '生日祝福.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  showToast('已导出：生日祝福.html');
+}
+
+/* ---------- 导出成品（独立文件）自动播放 ---------- */
+function standaloneStart(){
+  const cfg = window.BB_CONFIG || {};
+  nameInput.value  = cfg.name || '';
+  titleInput.value = cfg.title || '生日快乐';
+  blessInput.value = (cfg.blessings || []).join('\n');
+  lastInput.value  = cfg.last || defaultLast;
+  photos = (cfg.photos || []).map((d, i) => ({ id: i + 1, data: d, order: i }));
+  nextId = photos.length + 1;
+  startPreview();   // 跳过编辑界面，直接进礼物盒开场
+}
+
+/* ---------- 启动 ---------- */
+(async function init(){
+  if(window.BB_STANDALONE){
+    standaloneStart();   // 导出成品：跳过编辑界面，直接进礼物盒
+    return;
+  }
+  loadPrefs();
+  await initStorage();
+  renderGrid();
+})();
+</script>
+</body>
+</html>
